@@ -38,18 +38,19 @@ where F: Fn(T, U) -> V
 }
 
 pub fn many<'a, T>(stream: &'a str, parser: Parser<'a, T>) -> ParserResult<'a, Vec<T>> {
-    let mut results = Vec::new();
-    let mut tail = stream;
-    loop {
-        match (parser)(stream) {
-            Ok((value, rest)) => {
-                tail = rest;
-                results.push(value);
-            },
-            _ => break
+
+    fn recursion<'b, U>(stream: &'b str, parser: Parser<'b, U>, mut acc: Vec<U>) -> ParserResult<'b, Vec<U>> {
+        if let Ok((value, tail)) = (parser)(stream) {
+            acc.push(value);
+            return recursion(tail, parser, acc);
+        }
+        else {
+            return Ok((acc, stream));
         }
     }
-    Ok((results, tail))
+
+    let mut results = Vec::new();
+    recursion(stream, parser, results)
 }
 
 pub fn some<'a, T>(stream: &'a str, parser: Parser<'a, T>) -> ParserResult<'a, Vec<T>> {
