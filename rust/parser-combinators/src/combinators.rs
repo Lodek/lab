@@ -3,6 +3,8 @@ use super::{Parser, ParserResult, ParserT};
 // TODO implement sequence macro
 
 // FIXME alternation should take an arbitrary number of parser
+
+/// Tries `main` if the parsing fails, return the result of `other`
 pub fn alternation<'a, T>(
     stream: &'a str,
     main: Parser<'a, T>,
@@ -14,6 +16,8 @@ pub fn alternation<'a, T>(
     }
 }
 
+/// Applies a parser as many times as possible, return `Vec` of results
+/// (Analogous to a Kleene closure)
 pub fn many<'a, T>(stream: &'a str, parser: Parser<'a, T>) -> ParserResult<'a, Vec<T>> {
     fn recursion<'b, U>(
         stream: &'b str,
@@ -32,6 +36,7 @@ pub fn many<'a, T>(stream: &'a str, parser: Parser<'a, T>) -> ParserResult<'a, V
     recursion(stream, parser, results)
 }
 
+/// Applies a parser as many times as possible, but at *least* once, return `Vec` of results
 pub fn some<'a, T>(stream: &'a str, parser: Parser<'a, T>) -> ParserResult<'a, Vec<T>> {
     match (parser)(stream) {
         Ok((value, tail)) => many(tail, parser).map(|(mut vec, tail)| {
