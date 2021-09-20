@@ -1,48 +1,31 @@
 use super::{Parser, ParserResult, ParserT};
+use super::operators::{many, some};
 
-// TODO implement sequence macro
-
-// FIXME alternation should take an arbitrary number of parser
-
-/// Tries `main` if the parsing fails, return the result of `other`
-pub fn alternation<'a, T>(
-    stream: &'a str,
-    main: Parser<'a, T>,
-    other: Parser<'a, T>,
-) -> ParserResult<'a, T> {
-    match (main)(stream) {
-        Err(_) => (other)(stream),
-        result => result,
+/// Returns a new parser that applies the original parser as many times as possible
+pub fn manyP<'a, P, T>(parser: P) -> impl FnOnce(&'a str) -> ParserResult<'a, Vec<T>>
+where P: Fn(&'a str) -> ParserResult<'a, T>
+{
+    |stream: &'a str| -> ParserResult<'a, Vec<T>> {
+        many(stream, parser)
     }
 }
 
-/// Applies a parser as many times as possible, return `Vec` of results
-/// (Analogous to a Kleene closure)
-pub fn many<'a, T>(stream: &'a str, parser: Parser<'a, T>) -> ParserResult<'a, Vec<T>> {
-    fn recursion<'b, U>(
-        stream: &'b str,
-        parser: Parser<'b, U>,
-        mut acc: Vec<U>,
-    ) -> ParserResult<'b, Vec<U>> {
-        if let Ok((value, tail)) = (parser)(stream) {
-            acc.push(value);
-            return recursion(tail, parser, acc);
-        } else {
-            return Ok((acc, stream));
-        }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::parsers::{elem, digit};
+
+    #[test]
+    fn test_alternate_macro_one_param() {
+        let result = alternate!("abc", elem,);
+        assert_eq!(result, Ok(('a', "bc")));
     }
 
-    let mut results = Vec::new();
-    recursion(stream, parser, results)
-}
-
-/// Applies a parser as many times as possible, but at *least* once, return `Vec` of results
-pub fn some<'a, T>(stream: &'a str, parser: Parser<'a, T>) -> ParserResult<'a, Vec<T>> {
-    match (parser)(stream) {
-        Ok((value, tail)) => many(tail, parser).map(|(mut vec, tail)| {
-            vec.insert(0, value);
-            (vec, tail)
-        }),
-        Err(msg) => Err(format!("No sucessful parse in `some`: {}", msg)),
+    #[test]
+    fn test_alternate_macro_many_params() {
+        let result = alternate!("abc", digit, digit, elem);
+        assert_eq!(result, Ok(('a', "bc")));
     }
+
 }

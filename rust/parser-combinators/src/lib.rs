@@ -5,6 +5,7 @@ pub type ParserT<'a, T> = Fn(&'a str) -> ParserResult<'a, T>;
 
 pub mod combinators;
 pub mod parsers;
+pub mod operators;
 
 #[cfg(test)]
 mod test {
