@@ -11,7 +11,7 @@ pub enum Repeater {
 
 pub enum Factor {
     Symbol(char),
-    Group(Expression)
+    Group(Box<Expression>)
 }
 
 pub enum Term {
@@ -20,7 +20,8 @@ pub enum Term {
 }
 
 pub enum Expression {
-    Concat(Expression, Term),
-    Alternation(Expression, Term),
+    Concat(Box<Expression>, Term),
+    Alternation(Box<Expression>, Term),
     Singleton(Term)
 }
+

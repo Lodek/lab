@@ -6,9 +6,9 @@ version = 3
 name = "grep-parser-combinators"
 version = "0.1.0"
 dependencies = [
- "parser-combinators",
+ "parser_combinators",
 ]
 
 [[package]]
-name = "parser-combinators"
+name = "parser_combinators"
 version = "0.1.0"
