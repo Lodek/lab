@@ -2,7 +2,8 @@ use super::{Parser, ParserResult, ParserT};
 
 /// Macro tries every given parser and return the first succesful match
 /// or the result of the last parser
-macro_rules! alternate {
+#[macro_export]
+macro_rules! try_parsers {
     ($stream: expr, $parser:expr, $($parsers:ident),*) => {
         {
             let mut result = ($parser)($stream);
