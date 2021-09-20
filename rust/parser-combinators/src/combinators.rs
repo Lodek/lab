@@ -2,6 +2,9 @@ use super::{Parser, ParserResult, ParserT};
 use super::operators::{many, some};
 
 /// Returns a new parser that applies the original parser as many times as possible
+// why the crap does it work with impl FnOnce?
+// why does it not work without the impl
+// and why does it not work with a trait bound generic?
 pub fn manyP<'a, P, T>(parser: P) -> impl FnOnce(&'a str) -> ParserResult<'a, Vec<T>>
 where P: Fn(&'a str) -> ParserResult<'a, T>
 {
