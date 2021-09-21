@@ -1,3 +1,3 @@
 
-mod syntax_tree;
-mod regex_parser;
+pub mod syntax_tree;
+pub mod regex_parser;
