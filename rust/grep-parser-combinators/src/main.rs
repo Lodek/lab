@@ -8,10 +8,9 @@ fn main() {
     //let mut stdin = io::stdin();
     //stdin.read_line(&mut stream).unwrap();
 
-    let regex = "abc";
+    let regex = "ab((cd+)|(ef*))gh(ij)*";
 
     let (expr, tail) = parse_expression(regex).unwrap();
 
     println!("{:?}", expr);
-    println!("{:?}", tail);
 }
