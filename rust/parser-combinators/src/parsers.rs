@@ -24,11 +24,7 @@ where
 }
 
 pub fn a_char<'a>(stream: &'a str, c: char) -> ParserResult<'a, char> {
-    match elem(stream) {
-        Err(msg) => Err(msg),
-        Ok(('c', tail)) => Ok((c, tail)),
-        _ => Err(String::from("Character not found")),
-    }
+    satisfies(stream, |matched| matched == c).map_err(|_| String::from("Character not found"))
 }
 
 pub fn digit<'a>(stream: &'a str) -> ParserResult<'a, char> {
