@@ -25,16 +25,31 @@ where P: Fn(&'a str) -> ParserResult<'a, T>
     }
 }
 
-#[macro_export]
-macro_rules! alternate {
-    ($($parsers: tt),+) => {
-        {
-            |stream: &'a str| -> ParserResult<'a, T> {
-                try_parsers(stream, $parsers)
-            }
-        }
+pub fn alternate<'a, P, T>(first: P, second: P) -> impl Fn(&'a str) -> ParserResult<'a, T>
+where P: Fn(&'a str) -> ParserResult<'a, T> {
+    move |stream| try_parsers!(stream, first, second)
+}
+
+pub fn chain<'a, PA, PB, T, U>(first: PA, second: PB) -> impl Fn(&'a str) -> ParserResult<'a, (T, U)> 
+where PA: Fn(&'a str) -> ParserResult<'a, T>,
+      PB: Fn(&'a str) -> ParserResult<'a, U>,
+{
+    move |stream| {
+        let (first_result, stream) = (first)(stream)?;
+        let (second_result, stream) = (second)(stream)?;
+        Ok(((first_result, second_result), stream))
     }
 }
+
+/// Chain N parsers
+// not sure how to implement it though, the return type would be dynamic,
+// how could i build a tuple out of the expression expansion.
+// maybe i a need proc macro for that
+//macro_rules! chainN
+
+/// Alternate N parsers
+// Need to look into token tree macros to build alternateN
+//macro_rules! alternateN
 
 
 #[cfg(test)]
