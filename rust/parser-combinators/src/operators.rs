@@ -20,12 +20,12 @@ macro_rules! try_parsers {
 
 /// Applies a parser as many times as possible, return `Vec` of results
 /// (Analogous to a Kleene closure)
-pub fn many<'a, P, T>(stream: &'a str, parser: P) -> ParserResult<'a, Vec<T>> 
+pub fn many<'a, P, T>(stream: &'a str, parser: &P) -> ParserResult<'a, Vec<T>> 
 where P: Fn(&'a str) -> ParserResult<'a, T>
 {
     fn recursion<'a, P, T>(
         stream: &'a str,
-        parser: P,
+        parser: &P,
         mut acc: Vec<T>,
     ) -> ParserResult<'a, Vec<T>> 
     where P: Fn(&'a str) -> ParserResult<'a, T>
@@ -43,7 +43,7 @@ where P: Fn(&'a str) -> ParserResult<'a, T>
 }
 
 /// Applies a parser as many times as possible, but at *least* once, return `Vec` of results
-pub fn some<'a, P, T>(stream: &'a str, parser: P) -> ParserResult<'a, Vec<T>> 
+pub fn some<'a, P, T>(stream: &'a str, parser: &P) -> ParserResult<'a, Vec<T>> 
 where P: Fn(&'a str) -> ParserResult<'a, T>
 {
     match (parser)(stream) {

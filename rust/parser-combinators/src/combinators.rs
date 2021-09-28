@@ -8,11 +8,11 @@ use super::operators::some as some_op;
 // There might be an overhead from the monomorphization process?
 
 /// Returns a new parser that applies the original parser as many times as possible
-pub fn many<'a, P, T>(parser: P) -> impl FnOnce(&'a str) -> ParserResult<'a, Vec<T>>
+pub fn many<'a, P, T>(parser: P) -> impl Fn(&'a str) -> ParserResult<'a, Vec<T>>
 where P: Fn(&'a str) -> ParserResult<'a, T>
 {
-    |stream: &'a str| -> ParserResult<'a, Vec<T>> {
-        many_op(stream, parser)
+    move |stream: &'a str| -> ParserResult<'a, Vec<T>> {
+        many_op(stream, &parser)
     }
 }
 
@@ -20,8 +20,8 @@ where P: Fn(&'a str) -> ParserResult<'a, T>
 pub fn some<'a, P, T>(parser: P) -> impl FnOnce(&'a str) -> ParserResult<'a, Vec<T>>
 where P: Fn(&'a str) -> ParserResult<'a, T>
 {
-    |stream: &'a str| -> ParserResult<'a, Vec<T>> {
-        some_op(stream, parser)
+    move |stream: &'a str| -> ParserResult<'a, Vec<T>> {
+        some_op(stream, &parser)
     }
 }
 
