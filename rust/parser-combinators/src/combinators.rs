@@ -17,7 +17,7 @@ where P: Fn(&'a str) -> ParserResult<'a, T>
 }
 
 /// Returns a new parser that applies the original parser at least once
-pub fn some<'a, P, T>(parser: P) -> impl FnOnce(&'a str) -> ParserResult<'a, Vec<T>>
+pub fn some<'a, P, T>(parser: P) -> impl Fn(&'a str) -> ParserResult<'a, Vec<T>>
 where P: Fn(&'a str) -> ParserResult<'a, T>
 {
     move |stream: &'a str| -> ParserResult<'a, Vec<T>> {
