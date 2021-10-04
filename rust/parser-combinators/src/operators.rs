@@ -21,30 +21,30 @@ macro_rules! try_parsers {
 /// Applies a parser as many times as possible, return `Vec` of results
 /// (Analogous to a Kleene closure)
 pub fn many<'a, P, T>(stream: &'a str, parser: &P) -> ParserResult<'a, Vec<T>> 
-where P: Fn(&'a str) -> ParserResult<'a, T>
+where for<'b> P: Fn(&'b str) -> ParserResult<'b, T>
 {
-    fn recursion<'a, P, T>(
+    fn apply_and_repeat<'a, P, T>(
         stream: &'a str,
         parser: &P,
         mut acc: Vec<T>,
     ) -> ParserResult<'a, Vec<T>> 
-    where P: Fn(&'a str) -> ParserResult<'a, T>
+    where for<'b> P: Fn(&'b str) -> ParserResult<'b, T>
     {
         if let Ok((value, tail)) = (parser)(stream) {
             acc.push(value);
-            return recursion(tail, parser, acc);
+            return apply_and_repeat(tail, parser, acc);
         } else {
             return Ok((acc, stream));
         }
     }
 
     let mut results = Vec::new();
-    recursion(stream, parser, results)
+    apply_and_repeat(stream, parser, results)
 }
 
 /// Applies a parser as many times as possible, but at *least* once, return `Vec` of results
 pub fn some<'a, P, T>(stream: &'a str, parser: &P) -> ParserResult<'a, Vec<T>> 
-where P: Fn(&'a str) -> ParserResult<'a, T>
+where for<'b> P: Fn(&'b str) -> ParserResult<'b, T>
 {
     match (parser)(stream) {
         Ok((value, tail)) => many(tail, parser).map(|(mut vec, tail)| {
