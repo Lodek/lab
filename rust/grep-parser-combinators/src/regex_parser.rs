@@ -1,12 +1,12 @@
 use parser_combinators::{ParserResult};
 use parser_combinators::parsers::{elem, alphanumeric, satisfies, a_char};
-use parser_combinators::operators::{many, some};
+use parser_combinators::operators::{many};
 use parser_combinators::try_parsers;
 use std::collections::HashSet;
 
 use crate::syntax_tree::{Repeater, Factor, Term, Expression, Operator};
 
-const reserved_characters: &'static str = "()*|";
+const RESERVED_CHARACTERS: &'static str = "()*|";
 
 fn parse_repeater<'a>(stream: &'a str) -> ParserResult<'a, Repeater>  {
 
@@ -22,7 +22,7 @@ fn parse_repeater<'a>(stream: &'a str) -> ParserResult<'a, Repeater>  {
 }
 
 fn parse_symbol<'a>(stream: &'a str) -> ParserResult<'a, Factor> {
-    satisfies(stream, |c| !reserved_characters.contains(c))
+    satisfies(stream, |c| !RESERVED_CHARACTERS.contains(c))
         .map(|(c, stream)| (Factor::Symbol(c), stream))
 }
 
@@ -81,7 +81,7 @@ pub fn parse_expression<'a>(stream: &'a str) -> ParserResult<'a, Expression> {
 
     let (first, stream) = parse_term(stream)?;
     let first_leaf = Expression::Leaf(first);
-    let (results, stream) = many(stream, parse_operator_term)?;
+    let (results, stream) = many(stream, &parse_operator_term)?;
     let tree = results.into_iter().fold(first_leaf, combine_results);
     Ok((tree, stream))
 }

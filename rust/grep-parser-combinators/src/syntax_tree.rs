@@ -35,12 +35,12 @@ pub enum Expression {
 }
 
 impl Expression {
-    fn into_bfs_iterator(&self) -> EagerDfsExpressionIterator {
+    pub fn into_dfs_iterator(&self) -> EagerDfsExpressionIterator {
         EagerDfsExpressionIterator::new(self)
     }
 }
 
-struct EagerDfsExpressionIterator<'a>(Vec<&'a Expression>);
+pub struct EagerDfsExpressionIterator<'a>(Vec<&'a Expression>);
 
 impl<'a> EagerDfsExpressionIterator<'a> {
 
@@ -56,13 +56,10 @@ impl<'a> EagerDfsExpressionIterator<'a> {
     }
 
     fn generate_node_sequence(head: &'a Expression, stack: &mut Vec<&'a Expression>) {
-        match head {
-            Expression::Leaf(_) => stack.push(head),
-            Expression::Node(ref left, _, ref right) => {
-                Self::generate_node_sequence(left, stack);
-                Self::generate_node_sequence(right, stack);
-                stack.push(head);
-            }
+        if let Expression::Node(ref left, _, ref right) = head {
+            Self::generate_node_sequence(left, stack);
+            Self::generate_node_sequence(right, stack);
+            stack.push(head);
         }
     }
 }
