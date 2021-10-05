@@ -3,36 +3,32 @@ use crate::try_parsers;
 use super::operators::many as many_op;
 use super::operators::some as some_op;
 
-// why the crap does it work with impl FnOnce?
-// Maybe I should use a trait object for the parser?
-// There might be an overhead from the monomorphization process?
 
 /// Returns a new parser that applies the original parser as many times as possible
-pub fn many<'a, P, T>(parser: P) -> impl Fn(&'a str) -> ParserResult<'a, Vec<T>>
-where P: Fn(&'a str) -> ParserResult<'a, T>
+pub fn many<P, T>(parser: P) -> impl for <'b> Fn(&'b str) -> ParserResult<'b, Vec<T>>
+where for<'a> P: Fn(&'a str) -> ParserResult<'a, T>
 {
-    move |stream: &'a str| -> ParserResult<'a, Vec<T>> {
-        many_op(stream, &parser)
-    }
+    move |stream| many_op(stream, &parser)
 }
 
 /// Returns a new parser that applies the original parser at least once
-pub fn some<'a, P, T>(parser: P) -> impl Fn(&'a str) -> ParserResult<'a, Vec<T>>
-where P: Fn(&'a str) -> ParserResult<'a, T>
+pub fn some<P, T>(parser: P) -> impl for<'b> Fn(&'b str) -> ParserResult<'b, Vec<T>>
+where for<'a> P: Fn(&'a str) -> ParserResult<'a, T>
 {
-    move |stream: &'a str| -> ParserResult<'a, Vec<T>> {
-        some_op(stream, &parser)
-    }
+    move |stream| some_op(stream, &parser)
 }
 
-pub fn alternate<'a, P, T>(first: P, second: P) -> impl Fn(&'a str) -> ParserResult<'a, T>
-where P: Fn(&'a str) -> ParserResult<'a, T> {
+
+pub fn alternate<PA, PB, T>(first: PA, second: PB) -> impl for<'c> Fn(&'c str) -> ParserResult<'c, T>
+where for<'a> PA: Fn(&'a str) -> ParserResult<'a, T>,
+      for<'b> PB: Fn(&'b str) -> ParserResult<'b, T> 
+{
     move |stream| try_parsers!(stream, first, second)
 }
 
-pub fn chain<'a, PA, PB, T, U>(first: PA, second: PB) -> impl Fn(&'a str) -> ParserResult<'a, (T, U)> 
-where PA: Fn(&'a str) -> ParserResult<'a, T>,
-      PB: Fn(&'a str) -> ParserResult<'a, U>,
+pub fn chain<PA, PB, T, U>(first: PA, second: PB) -> impl for<'a> Fn(&'a str) -> ParserResult<'a, (T, U)> 
+where for<'b> PA: Fn(&'b str) -> ParserResult<'b, T>,
+      for<'c> PB: Fn(&'c str) -> ParserResult<'c, U>,
 {
     move |stream| {
         let (first_result, stream) = (first)(stream)?;
@@ -56,12 +52,4 @@ where PA: Fn(&'a str) -> ParserResult<'a, T>,
 mod test {
     use super::*;
     use crate::parsers::{elem, digit};
-    use crate::alternate;
-
-    #[test]
-    fn test_alternate_parser_tries_all_parsers() {
-        //let parser = alternate!(digit, digit, elem);
-        //let result = parser("abc");
-        //assert_eq!(Ok(('a', "bc")), result);
-    }
 }
