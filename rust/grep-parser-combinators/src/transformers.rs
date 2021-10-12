@@ -11,8 +11,7 @@ fn factor_parser_factory(factor: &Factor) -> Box<dyn for <'a> Fn(&'a str) -> Par
             let c = *c;
             Box::new(move |stream| a_char(stream, c).map(|(_, stream)| ((), stream)))
         },
-        //Factor::Group(expr) => expression_parser_factory(&expr),
-        _ => Box::new(|stream| elem(stream).map(|(_, stream)| ((), stream))),
+        Factor::Group(expr) => expression_parser_factory(&expr),
     }
 }
 
