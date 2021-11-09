@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+// TODO document structs
+
 pub struct EventLoop<EventEnum> {
     user_events: VecDeque<Event<EventEnum, EventEnum>>
 }
@@ -43,6 +45,8 @@ impl<EventEnum> EventLoop<EventEnum> {
 
     fn monitor_fd() {}
 }
+
+// TODO impl Drop trait
 
 
 #[cfg(test)]
