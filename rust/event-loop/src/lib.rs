@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 // TODO document structs
 
+
 pub struct EventLoop<EventEnum> {
     user_events: VecDeque<Event<EventEnum, EventEnum>>
 }
@@ -32,11 +33,18 @@ impl<EventEnum> EventLoop<EventEnum> {
 
     pub fn run(&mut self) {
         loop {
+            self.handle_events()
+        }
+    }
+
+    pub fn handle_events(&mut self) {
+        loop {
             match self.user_events.pop_front() {
                 Some(event) => (event.callback)(event.data, self),
                 None => break
             }
         }
+
     }
 
     fn tear_down() {}
@@ -70,8 +78,8 @@ mod tests {
         let mut event_loop = EventLoop::new();
         event_loop.push_event(update_ctx, CustomData(&mut ctx));
 
-        // when i run the event loop
-        event_loop.run();
+        // when i handle the current events
+        event_loop.handle_events();
 
         // then ctx was updated
         assert_eq!(ctx.0, 69);
