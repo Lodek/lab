@@ -1,21 +1,44 @@
-use std::collections::VecDeque;
+// TODO Finish reading about panic handling
+// Not sure what should be the expected behavior and how to implement a hook.
+// I'd like to keep the context about the event being handle, but maybe that's unecessary.
+// Does calling panic breaks the flow of execution?
+// Does panicking return from the current function?
+// How can a function panic without crashing the event loop?
 
-// TODO document structs
+// TODO How am I going to handle the event type stuff? Any, dynamic dispatching, boxing or generics?
+
+// TODO Refactor code accordingly
+
+// TODO finish Runner
+
+//! Implementation of a Event Loop
+use std::collections::{VecDeque, BTreeMap};
+use std::time::{Duration, Instant};
 
 
-pub struct EventLoop<EventEnum> {
-    user_events: VecDeque<Event<EventEnum, EventEnum>>
+pub struct Opts {
+    max_retries: u8
 }
 
-type Callback<T, EventEnum> = fn (T, &mut EventLoop<EventEnum>) -> ();
-
-pub struct Event<T, EventEnum> {
-    callback: Callback<T, EventEnum>,
-    data: T
+pub struct Event {
+    // Is there any way to store a closure without a box?
+    callback: Box<dyn FnMut () -> Result<(), String>>,
+    attempt: u8,
 }
 
+trait Timer {
+    fn add_timer(timeout: Duration, event: Event) -> Result<(), String>;
+    //fn pop_older_than(&mut self, instant: Instant) -> impl Iterator<Item=Event>;
+    //fn pop_expired(&mut self) -> impl Iterator<Item=Event> {
+        //self.pop_older_than(Instant::now())
+    //}
+}
 
-impl<EventEnum> EventLoop<EventEnum> {
+pub struct EventLoop {
+    user_events: VecDeque<Event>
+}
+
+impl EventLoop {
 
     pub fn new() -> Self {
         EventLoop {
@@ -23,10 +46,12 @@ impl<EventEnum> EventLoop<EventEnum> {
         }
     }
 
-    pub fn push_event(&mut self, callback: Callback<EventEnum, EventEnum>, data: EventEnum) {
+    pub fn push_event<T>(&mut self, callback: T) -> ()
+        where T: FnMut() -> Result<(), String> + 'static
+    {
         let event = Event {
-            callback,
-            data
+            callback: Box::new(callback),
+            attempt: 0,
         };
         self.user_events.push_back(event)
     }
@@ -39,12 +64,15 @@ impl<EventEnum> EventLoop<EventEnum> {
 
     pub fn handle_events(&mut self) {
         loop {
+            // TODO refactor using combinators
             match self.user_events.pop_front() {
-                Some(event) => (event.callback)(event.data, self),
+                // FIXME Add retry policy based on event result
+                Some(mut event) => {
+                    (event.callback)();
+                },
                 None => break
             }
         }
-
     }
 
     fn tear_down() {}
@@ -54,34 +82,28 @@ impl<EventEnum> EventLoop<EventEnum> {
     fn monitor_fd() {}
 }
 
-// TODO impl Drop trait
+// TODO  impl Drop for EventLoop {
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use std::rc::Rc;
 
     #[test]
     fn callback_updates_ctx() {
+        struct Ctx(u8);
 
-        // Given shared ctx type
-        pub struct Ctx(i8);
-        // given event data with ref to context
-        pub struct CustomData<'a>(&'a mut Ctx);
-        // given callback that mutates value in context
-        fn update_ctx<'a>(data: CustomData<'a>, ev_loop: &mut EventLoop<CustomData<'a>>) -> () {
-            data.0.0 = 69;
-        }
-        // given event loop with event to update context through the callback
-        let mut ctx = Ctx(42);
+        let ctx = Rc::new(Ctx(42));
+        let ctx_ref = ctx.clone();
+        let update_ctx = move || {
+            ctx_ref.0;
+            Ok(())
+        };
         let mut event_loop = EventLoop::new();
-        event_loop.push_event(update_ctx, CustomData(&mut ctx));
+        event_loop.push_event(update_ctx);
 
         // when i handle the current events
         event_loop.handle_events();
-
-        // then ctx was updated
-        assert_eq!(ctx.0, 69);
     }
 }
