@@ -5,15 +5,15 @@
 // Does panicking return from the current function?
 // How can a function panic without crashing the event loop?
 
-// TODO How am I going to handle the event type stuff? Any, dynamic dispatching, boxing or generics?
-
 // TODO Refactor code accordingly
 
 // TODO finish Runner
 
-//! Implementation of a Event Loop
+//! Implementation of an Event Loop
 use std::collections::{VecDeque, BTreeMap};
 use std::time::{Duration, Instant};
+use std::panic::{catch_unwind, set_hook};
+
 
 
 pub struct Opts {
@@ -21,8 +21,7 @@ pub struct Opts {
 }
 
 pub struct Event {
-    // Is there any way to store a closure without a box?
-    callback: Box<dyn FnMut () -> Result<(), String>>,
+    callback: Box<dyn FnMut (&mut EventLoop) -> Result<(), String>>,
     attempt: u8,
 }
 
@@ -34,20 +33,28 @@ trait Timer {
     //}
 }
 
+type Queue = VecDeque<Event>;
+
 pub struct EventLoop {
-    user_events: VecDeque<Event>
+    user_events: Queue,
+    timer_events: Queue,
+    io_events: Queue,
+    opts: Opts
 }
 
 impl EventLoop {
 
-    pub fn new() -> Self {
+    pub fn new(opts: Opts) -> Self {
         EventLoop {
-            user_events: VecDeque::new()
+            user_events: VecDeque::new(),
+            io_events: VecDeque::new(),
+            timer_events: VecDeque::new(),
+            opts
         }
     }
 
-    pub fn push_event<T>(&mut self, callback: T) -> ()
-        where T: FnMut() -> Result<(), String> + 'static
+    pub fn push_event<'a, T>(&mut self, callback: T) -> ()
+        where T: FnMut(&mut EventLoop) -> Result<(), String> + 'static
     {
         let event = Event {
             callback: Box::new(callback),
@@ -62,13 +69,31 @@ impl EventLoop {
         }
     }
 
+    fn handle_event(&mut self, mut event: Event) {
+        if event.attempt <= self.opts.max_retries {
+            catch_unwind(|| (event.callback)(self))
+                .and_then(|callback_result| {
+                    callback_result.or_else(|err| {
+                        eprintln!("error handling event: event={:?}: err={}", event, err);
+                        event.attempt += 1;
+                        self.user_events.push_back(event);
+                        Ok(())
+                    })
+                }).or_else(|panic_cause| {
+                    eprintln!("panic handling event: event={:?}: {:?}", event, panic_cause);
+                    Ok(())
+                });
+        }
+        else {
+            eprintln!("max retry for handling event reached: {:?}", event);
+        }
+    }
+
     pub fn handle_events(&mut self) {
         loop {
-            // TODO refactor using combinators
             match self.user_events.pop_front() {
-                // FIXME Add retry policy based on event result
-                Some(mut event) => {
-                    (event.callback)();
+                Some(event) => {
+                    self.handle_event(event);
                 },
                 None => break
             }
@@ -95,9 +120,9 @@ mod tests {
         struct Ctx(u8);
 
         let ctx = Rc::new(Ctx(42));
-        let ctx_ref = ctx.clone();
-        let update_ctx = move || {
-            ctx_ref.0;
+        //let ctx_ref = ctx.clone();
+        let update_ctx = |a| {
+            //ctx_ref.0;
             Ok(())
         };
         let mut event_loop = EventLoop::new();
