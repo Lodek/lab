@@ -1,0 +1,9 @@
+version: '3.7'
+services:
+  app:
+    build:
+      context: .
+    volumes:
+      - '.:/app'
+    environment:
+      PKCS11_MOD: /usr/lib/softhsm/libsofthsm2.so
