@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime};
 use std::thread::sleep;
 
 fn main() {
-    gen_event(Duration::from_secs(1));
+    gen_event(Duration::from_secs(5));
 }
 
 /// Create an uinput virtual device
@@ -37,7 +37,7 @@ fn gen_event(loop_delay: Duration) {
         uinput_dev.write_event(&press).unwrap();
         uinput_dev.write_event(&report).unwrap();
         eprintln!("Pressed key");
-        sleep(loop_delay);
+        sleep(Duration::from_millis(500));
 
         let timeval = build_timeval();
         let release = InputEvent::new(&timeval, &EventCode::EV_KEY(EV_KEY::KEY_SPACE), 0);
