@@ -1,0 +1,2 @@
+module: /usr/lib/pkcs11/libkmsp11.so
+log-calls: yes

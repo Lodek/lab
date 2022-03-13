@@ -1,0 +1,4 @@
+tokens:
+  - key_ring: "projects/cloud-hsm-328011/locations/global/keyRings/keyring-ha"
+    label: "hsm"
+log_directory: "/var/log/"
