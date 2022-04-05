@@ -34,4 +34,5 @@ RUN apk add --update --no-cache \
 FROM nginx:1.21-alpine
 COPY --from=builder /nginx-${NGINX_VERSION}/objs/ngx_http_naxsi_module.so /etc/nginx/modules/
 COPY --from=builder /naxsi/naxsi_config/naxsi_core.rules /etc/nginx/
-RUN wget "https://gist.githubusercontent.com/Lodek/66a207c3e59076a297c0cd22141519dc/raw/fa119f402735e26e3038013e72e6bd6413638abc/nginx.conf" -O /etc/nginx/nginx.conf
+COPY ./nginx.conf /etc/nginx/nginx.conf
+COPY ./conf /etc/nginx/conf

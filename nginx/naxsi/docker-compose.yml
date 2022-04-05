@@ -8,3 +8,5 @@ services:
         - NAXSI_COMMIT=15e58c3385e339509bf5ea42437d195fa6e0e488
     ports:
       - 9000:80
+    volumes:
+      - ./conf:/etc/nginx/conf
