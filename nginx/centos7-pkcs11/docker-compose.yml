@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  nginx:
+    build:
+      context: .
+    ports:
+      - 10001:80
+    volumes:
+      - ./conf/nginx:/etc/nginx
+      - ./conf/openssl:/etc/openssl
