@@ -1,0 +1,5 @@
+tokens:
+  - key_ring: "projects/cloud-hsm-328011/locations/global/keyRings/stage-hsm"
+    label: "hsm"
+refresh_interval_secs: 300
+rpc_timeout_secs: 60

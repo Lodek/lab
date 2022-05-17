@@ -1,6 +1,14 @@
 FROM centos:centos7
+
+# Initial setup
 ARG BUILD_DIR=/build
 WORKDIR /build
+RUN yum clean all &&\
+    yum --assumeyes install curl vim &&\
+    yum groupinstall --assumeyes "Development tools" &&\
+    groupadd --gid 101 nginx &&\
+    useradd --shell /sbin/nologin --gid 101 --uid 101 nginx
+
 
 # Build openssl
 # 
@@ -24,10 +32,7 @@ WORKDIR /build
 ARG OPENSSL_URL="https://www.openssl.org/source/openssl-1.1.1o.tar.gz"
 ARG OPENSSL_PREFIX="/usr/local"
 ARG OPENSSL_DIR="/root"
-RUN yum clean all &&\
-    yum install --assumeyes curl &&\
-    yum groupinstall --assumeyes "Development tools" &&\
-    cd $BUILD_DIR &&\
+RUN cd $BUILD_DIR &&\
     curl --location $OPENSSL_URL > $BUILD_DIR/openssl.tar.gz &&\
     tar xvf $BUILD_DIR/openssl.tar.gz &&\
     rm -f $BUILD_DIR/openssl.tar.gz && cd $BUILD_DIR/openssl* &&\
@@ -35,43 +40,12 @@ RUN yum clean all &&\
     make && make install
 
 
-# Build libp11
-ARG LIBP11_RELEASE="https://github.com/OpenSC/libp11/releases/download/libp11-0.4.11/libp11-0.4.11.tar.gz"
-RUN cd $BUILD_DIR &&\
-    curl --location $LIBP11_RELEASE > $BUILD_DIR/libp11.tar.gz &&\
-    tar xvf $BUILD_DIR/libp11.tar.gz &&\
-    rm -f $BUILD_DIR/libp11.tar.gz &&\
-    cd $BUILD_DIR/libp11* &&\
-    ./configure OPENSSL_CFLAGS="-I${OPENSSL_PREFIX}/include" \
-                OPENSSL_LIBS="-L${OPENSSL_PREFIX}/lib -lssl -lcrypto" \
-                --with-enginesdir="${OPENSSL_PREFIX}/lib64/engines-1.1" \
-    &&\
-    make &&\
-    make install
-
-
-# Fetch and install libkmsp11 under /usr/local/lib
-ARG libkmsp11_url="https://github.com/GoogleCloudPlatform/kms-integrations/releases/download/v1.1/libkmsp11-1.1-linux-amd64.tar.gz"
-RUN cd $BUILD_DIR &&\
-    curl --location $libkmsp11_url > $BUILD_DIR/libkms.tar.gz &&\
-    tar xvf $BUILD_DIR/libkms.tar.gz &&\
-    rm -f $BUILD_DIR/libkms.tar.gz &&\
-    mkdir -p /etc/kms /etc/gcp &&\
-    mv $BUILD_DIR/libkmsp11*/libkmsp11.so /usr/local/lib/libkmsp11.so &&\
-    rm -rf $BUILD_DIR/libkms*
-
-    
-# Minimum Nginx build from source.
+# Minimum Nginx build from source linking against the compiled openssl 1.1.1
 # Uses the same version as being used by azion, sans the custom patches and modules.
 # See: https://github.com/aziontech/azion-nginx/blob/develop/specs/nginx.spec#L40
-#
-# Note that this nginx is dynamically linking against openssl and azion's nginx
-# statically builds nginx.
-# This build was done because centos 7 nginx runs against openssl 1.0.x,
-# which is incompatible with pkcs11 engine and libkmsp11
 ARG nginx_url="https://nginx.org/download/nginx-1.16.1.tar.gz"
 RUN cd $BUILD_DIR &&\
-    yum install --assumeyes pcre2 pcre pcre-devel pcre2-devel zlib-devel &&\
+    yum install --assumeyes pcre2 pcre pcre-devel pcre2-devel zlib-devel vim &&\
     curl --location $nginx_url > $BUILD_DIR/nginx.tar.gz &&\
     tar xvf $BUILD_DIR/nginx.tar.gz &&\
     rm -f  $BUILD_DIR/nginx.tar.gz && cd $BUILD_DIR/nginx* &&\
@@ -91,10 +65,77 @@ RUN cd $BUILD_DIR &&\
                 --with-debug &&\
     make && make install &&\
     mkdir -p /var/log/nginx &&\
+    chown nginx:nginx /var/log/nginx &&\
     ln -sf /dev/stderr /var/log/nginx/error.log &&\
     ln -sf /dev/stdin /var/log/nginx/access.log
 
+
+# Build libp11
+# Libp11 contains the OpenSSL pkcs11 engine which is used by nginx to perform
+# crypto operations using HSM objects
+ARG LIBP11_RELEASE="https://github.com/OpenSC/libp11/releases/download/libp11-0.4.11/libp11-0.4.11.tar.gz"
+RUN cd $BUILD_DIR &&\
+    curl --location $LIBP11_RELEASE > $BUILD_DIR/libp11.tar.gz &&\
+    tar xvf $BUILD_DIR/libp11.tar.gz &&\
+    rm -f $BUILD_DIR/libp11.tar.gz &&\
+    cd $BUILD_DIR/libp11* &&\
+    ./configure OPENSSL_CFLAGS="-I${OPENSSL_PREFIX}/include" \
+                OPENSSL_LIBS="-L${OPENSSL_PREFIX}/lib64 -lssl -lcrypto" \
+                --with-enginesdir="${OPENSSL_PREFIX}/lib64/engines-1.1" \
+    &&\
+    make &&\
+    make install
+
+
+# Fetch and install libkmsp11 under /usr/local/lib
+# libkmsp11 is the pkcs11 cryptoki provider for Googles Cloud HSM
+ARG libkmsp11_url="https://github.com/GoogleCloudPlatform/kms-integrations/releases/download/v1.1/libkmsp11-1.1-linux-amd64.tar.gz"
+RUN cd $BUILD_DIR &&\
+    curl --location $libkmsp11_url > $BUILD_DIR/libkms.tar.gz &&\
+    tar xvf $BUILD_DIR/libkms.tar.gz &&\
+    rm -f $BUILD_DIR/libkms.tar.gz &&\
+    mkdir -p /etc/kms /etc/gcp &&\
+    install --owner=nginx --group=nginx --mode=755 $BUILD_DIR/libkmsp11*/libkmsp11.so /usr/local/lib/libkmsp11.so &&\
+    rm -rf $BUILD_DIR/libkms* &&\
+    mkdir -p /var/log/kms &&\
+    chown nginx:nginx /var/log/kms &&\
+    mkdir -p /etc/gcp &&\
+    mkdir -p /etc/kms
+
+
+# build p11-kit
+# p11 kit is an util which allows for better coordination between in process libs
+# which call a pkcs11 module.
+# We use this because it conveniently is able to log pkcs11 calls
+ARG p11_kit_url="https://github.com/p11-glue/p11-kit/releases/download/0.24.1/p11-kit-0.24.1.tar.xz"
+RUN yum --assumeyes install libtasn1-devel libffi-devel &&\
+    cd $BUILD_DIR &&\
+    curl --location $p11_kit_url > $BUILD_DIR/p11-kit.tar.gz &&\
+    tar xvf $BUILD_DIR/p11-kit.tar.gz &&\
+    rm -f $BUILD_DIR/p11-kit.tar.gz &&\
+    cd $BUILD_DIR/p11-kit* &&\
+    ./configure --prefix="/usr/local" --with-system-config="/etc/pkcs11" &&\
+    make &&\
+    make install
+
+
+# Configure
+ENV KMS_PKCS11_CONFIG=/etc/kms/kms.yml
+ENV GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/credentials.json
+ENV GRPC_ENABLE_FORK_SUPPORT=1
 ENV OPENSSL_CONF="/etc/openssl/openssl-pkcs11.cnf"
-ENV LD_LIBRARY_PATH="/usr/local/lib64"
-COPY ./conf/nginx/nginx.conf /etc/nginx/nginx.conf
+
+COPY --chown=nginx:nginx ./conf/p11-kit /etc/pkcs11
+COPY --chown=nginx:nginx ./conf/kms/kms.yml /etc/kms/kms.yml
+COPY --chown=nginx:nginx ./secrets/credentials.json /etc/gcp/credentials.json
+COPY --chown=nginx:nginx ./conf/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --chown=nginx:nginx ./conf/openssl/openssl-pkcs11.cnf /etc/openssl/openssl-pkcs11.cnf
+
+RUN echo /usr/local/lib >> /etc/ld.so.conf &&\
+    echo /usr/local/lib64 >> /etc/ld.so.conf &&\
+    ldconfig  &&\
+    chown nginx:nginx /etc/kms/kms.yml &&\
+    chown nginx:nginx /etc/gcp/credentials.json 
+
+
 CMD ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;", "-c", "/etc/nginx/nginx.conf"]

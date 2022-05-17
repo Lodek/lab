@@ -4,7 +4,11 @@ services:
     build:
       context: .
     ports:
-      - 10001:80
+      - '10443:443'
+      - '10080:80'
     volumes:
+      - ./certs:/etc/certs
+      - ./kms-logs:/var/log/kms
       - ./conf/nginx:/etc/nginx
       - ./conf/openssl:/etc/openssl
+      - ./conf/p11-kit:/etc/pkcs11
