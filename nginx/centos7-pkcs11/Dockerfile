@@ -49,7 +49,8 @@ RUN cd $BUILD_DIR &&\
     curl --location $nginx_url > $BUILD_DIR/nginx.tar.gz &&\
     tar xvf $BUILD_DIR/nginx.tar.gz &&\
     rm -f  $BUILD_DIR/nginx.tar.gz && cd $BUILD_DIR/nginx* &&\
-    ./configure --with-http_ssl_module \
+    ./configure --conf-path=/etc/nginx/nginx.conf \
+                --with-http_ssl_module \
                 --with-http_v2_module \
                 --with-http_realip_module \
                 --with-http_addition_module \
@@ -67,7 +68,8 @@ RUN cd $BUILD_DIR &&\
     mkdir -p /var/log/nginx &&\
     chown nginx:nginx /var/log/nginx &&\
     ln -sf /dev/stderr /var/log/nginx/error.log &&\
-    ln -sf /dev/stdin /var/log/nginx/access.log
+    ln -sf /dev/stdin /var/log/nginx/access.log &&\
+    ln -sf /usr/local/nginx/sbin/nginx /sbin/nginx
 
 
 # Build libp11
@@ -135,7 +137,6 @@ RUN echo /usr/local/lib >> /etc/ld.so.conf &&\
     echo /usr/local/lib64 >> /etc/ld.so.conf &&\
     ldconfig  &&\
     chown nginx:nginx /etc/kms/kms.yml &&\
-    chown nginx:nginx /etc/gcp/credentials.json 
+    chown nginx:nginx /etc/gcp/credentials.json
 
-
-CMD ["/usr/local/nginx/sbin/nginx", "-g", "daemon off;", "-c", "/etc/nginx/nginx.conf"]
+CMD ["nginx", "-g", "daemon off;"]

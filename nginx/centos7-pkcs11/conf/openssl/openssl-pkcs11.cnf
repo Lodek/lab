@@ -10,6 +10,7 @@ pkcs11 = pkcs11_section
 engine_id = pkcs11
 dynamic_path = /usr/local/lib64/engines-1.1/pkcs11.so
 MODULE_PATH = /usr/local/lib/p11-kit-proxy.so
+#MODULE_PATH = /usr/local/lib/libkmsp11.so
 init = 1
 
 [req]

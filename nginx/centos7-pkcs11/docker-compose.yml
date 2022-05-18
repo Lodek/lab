@@ -12,3 +12,4 @@ services:
       - ./conf/nginx:/etc/nginx
       - ./conf/openssl:/etc/openssl
       - ./conf/p11-kit:/etc/pkcs11
+      - ./conf/kms:/etc/kms

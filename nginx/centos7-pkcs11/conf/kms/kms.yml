@@ -1,5 +1,7 @@
 tokens:
   - key_ring: "projects/cloud-hsm-328011/locations/global/keyRings/stage-hsm"
     label: "hsm"
-refresh_interval_secs: 300
 rpc_timeout_secs: 60
+# setting this value to anything other than 0 breaks the worker processes
+# might open an issue to the project to understand that
+refresh_interval_secs: 0
