@@ -122,10 +122,10 @@ RUN yum --assumeyes install libtasn1-devel libffi-devel &&\
 
 
 # Configure
-ENV KMS_PKCS11_CONFIG=/etc/kms/kms.yml
-ENV GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/credentials.json
-ENV GRPC_ENABLE_FORK_SUPPORT=1
-ENV OPENSSL_CONF="/etc/openssl/openssl-pkcs11.cnf"
+#ENV KMS_PKCS11_CONFIG=/etc/kms/kms.yml
+#ENV GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/credentials.json
+#ENV GRPC_ENABLE_FORK_SUPPORT=1
+#ENV OPENSSL_CONF="/etc/openssl/openssl-pkcs11.cnf"
 
 COPY --chown=nginx:nginx ./conf/p11-kit /etc/pkcs11
 COPY --chown=nginx:nginx ./conf/kms/kms.yml /etc/kms/kms.yml
@@ -139,4 +139,4 @@ RUN echo /usr/local/lib >> /etc/ld.so.conf &&\
     chown nginx:nginx /etc/kms/kms.yml &&\
     chown nginx:nginx /etc/gcp/credentials.json
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD KMS_PKCS11_CONFIG=/etc/kms/kms.yml GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/credentials.json GRPC_ENABLE_FORK_SUPPORT=1 OPENSSL_CONF="/etc/openssl/openssl-pkcs11.cnf" nginx -g 'daemon off;'

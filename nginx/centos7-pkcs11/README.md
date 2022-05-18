@@ -5,7 +5,12 @@ The container compiles OpenSSL 1.1.1 and compiles a minimal nginx against openss
 libp11 and p11-kit are also compiled and installed under /usr/local.
 libkmsp11 is fetched from Github Releases.
 
-# Setup notes
+## Setup notes
+The setup process combines a few different libs, environemtn variables and config files.
+
+Since this is a functional docker environemnt, checkout the corresponding files in the repo to see a working example
+
+### Env vars
 Some environment variables are paramount for this integration to work.
 
 - `OPENSSL_CONF` must point to an openssl conf which configure the pkcs11 engine
@@ -16,10 +21,52 @@ Some environment variables are paramount for this integration to work.
 `OPENSSL_CONF` must be set at a master process level.
 In a dockerless environment the system.d nginx unit is a good option.
 
-The other variables must be set as part of the nginx configuration as well using the `env` directive.
-That is due to nginx's behavior of removing env variables from its environment.
+The following snippet is an example on how to setup the environment variables:
+```
+Environment="KMS_PKCS11_CONFIG=/etc/kms/kms.yml"
+Environment="OPENSSL_CONF=/etc/ssl/openssl-pkcs11.cnf"
+Environment="GOOGLE_APPLICATION_CREDENTIALS=/etc/gcp/credentials.json"
+Environment="GRPC_ENABLE_FORK_SUPPORT=1"
+```
+
+Finally, some of these variables must be replicated to nginx's configuration file through the `env` directive.
+That is because of nginx's behavior which removes env variables from workers environments
 Therefore we need to replicate those values such that they will be accessible by the workers.
 See: https://nginx.org/en/docs/ngx_core_module.html#env
+
+### Configuration files
+
+#### Libkmsp11 
+Libkmsp11 requires 2 configuration files:
+- kms.yml config file
+- credentials.json credentials file
+
+The credentials files is used by libkmsp11 to authenticate with GCP.
+The credentials file contains the credentials for a GCP service account (https://cloud.google.com/iam/docs/service-accounts)
+
+The kms yaml configuration file is specific for libkmsp11 (https://github.com/GoogleCloudPlatform/kms-integrations/blob/master/kmsp11/docs/user_guide.md).
+
+
+Important notes:
+- Ensure the kms configuration files are chowned to the `nginx` user.
+- Ensure the kms.yml configuration file is chmoded to 744
+
+
+
+### openssl
+Openssl config file is used to declare and specify the location of the pkcs11 engine and which module it should use.
+
+See:
+- https://www.openssl.org/docs/man1.1.1/man5/config.html#Engine-Configuration-Module
+- https://github.com/OpenSC/libp11#using-the-engine-from-the-command-line
+
+### nginx
+Nginx requires a few tweaks to work with the PCKS11 engine.
+TLDR: add the `ssl_engine pkcs11` directive to the main context; add the correct `env ____` directive for the environment variables previously mentioned.
+
+See:
+- https://nginx.org/en/docs/ngx_core_module.html#env
+- https://nginx.org/en/docs/ngx_core_module.html#ssl_engine
 
 
 ## PKCS11 logging
