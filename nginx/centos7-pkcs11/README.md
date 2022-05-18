@@ -5,6 +5,22 @@ The container compiles OpenSSL 1.1.1 and compiles a minimal nginx against openss
 libp11 and p11-kit are also compiled and installed under /usr/local.
 libkmsp11 is fetched from Github Releases.
 
+# Setup notes
+Some environment variables are paramount for this integration to work.
+
+- `OPENSSL_CONF` must point to an openssl conf which configure the pkcs11 engine
+- `GOOGLE_APPLICATION_CREDENTIALS` must point to a valid GCP service account json credentials file. Note that the service account must have sufficient permissions
+- `KMS_PKCS11_CONFIG` must point to a libkmsp11 yaml configuration file. See Libkmsp11 conf section
+- `GRPC_ENABLE_FORK_SUPPORT` was recommended as part of libkms official integration guide. This seems like a somewhat obscure feature and I am unsure how it impacts the nginx integration. See https://github.com/grpc/grpc/issues/14056 and https://cloud.google.com/kms/docs/reference/pkcs11-nginx
+
+`OPENSSL_CONF` must be set at a master process level.
+In a dockerless environment the system.d nginx unit is a good option.
+
+The other variables must be set as part of the nginx configuration as well using the `env` directive.
+That is due to nginx's behavior of removing env variables from its environment.
+Therefore we need to replicate those values such that they will be accessible by the workers.
+See: https://nginx.org/en/docs/ngx_core_module.html#env
+
 
 ## PKCS11 logging
 p11-kit is a proxy pkcs11 implementation which delegates calls to some underlying token.
@@ -15,6 +31,9 @@ More info at:
 https://p11-glue.github.io/p11-glue/p11-kit/manual/
 
 ## Libkmsp11 conf
+`libkmsp11` uses a `.yml` configuration file.
+The config directives are docuemented in their [repository](https://github.com/GoogleCloudPlatform/kms-integrations/blob/master/kmsp11/docs/user_guide.md)
+
 One caveat found with this integration is that libkmsp11 does not play nice when `refresh_interval_secs` is set.
 It behaves correctl when Nginx is set to have no workers processes - ie `master_process off;`.
 However, if the master process is on, then it causes issues.
