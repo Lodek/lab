@@ -18,23 +18,19 @@ fn parent(node: usize) -> usize {
 }
 
 
-pub struct Heap<'a> {
-    len: usize,
+pub struct MaxHeap<'a> {
+    heap_len: usize,
     array: &'a mut [i32]
 }
 
 
-impl<'a> Heap<'a> {
+impl<'a> MaxHeap<'a> {
 
     pub fn new(array: &'a mut [i32]) -> Self {
-        Heap {
+        Self {
             heap_len: array.len(),
             array: array
         }
-    }
-
-    pub fn slice(&self) -> &[i32] {
-        &self.array
     }
 
     pub fn len(&self) -> usize {
@@ -56,9 +52,7 @@ impl<'a> Heap<'a> {
     /// This runtime is because for each tree level, there are a constant number of 
     /// operations to be performed.
     fn max_heapify(&mut self, node: usize) {
-        if node >= self.heap_len {
-            panic!("Out of bound node! {} is greater than heap size", node);
-        }
+        assert!(node < self.heap_len, "Out of bound node! index {} should be less than {} (heap size)", node, self.heap_len);
 
         let current = self.array[node];
         // Love this. An elegant way to avoid complicating the ifs.
@@ -71,24 +65,17 @@ impl<'a> Heap<'a> {
             self.array[right_index] = current;
             self.max_heapify(right_index);
         }
-        // TODO I am unsure how the heap would behave with equal 
-        // if left and right were the same.
-        // Left would bubble up but the then max heap property is violated, no?
+        // NOTE: If left and right are the same, left would bubble up and 
+        // array[parent(i)] == array[i].
+        //
+        // This scenario does not violate the heap property because
+        // the heap property acconts for parent equality.
+        // eg. for a max heap, parent(i) >= i. so it would beok
         else if left > current {
             let left_index = left_child(node);
             self.array[node] = left;
             self.array[left_index] = current;
             self.max_heapify(left_index);
-        }
-    }
-
-    /// Transforms an unordered array into a max heap.
-    ///
-    /// Apparently this has complexity O(lg n) as opposed to O(n)
-    /// but I don't fully understand why
-    fn build_max_heap(&mut self) {
-        for i in (1..=(self.array.len() / 2)).rev() {
-            self.max_heapify(i);
         }
     }
 
@@ -99,21 +86,32 @@ impl<'a> Heap<'a> {
     fn sort_recursion(&mut self) {
         if self.heap_len > 1 {
             let tail_index = self.heap_len - 1;
-
             let head = self.array[0];
             let tail = self.array[tail_index];
             self.array[0] = tail;
             self.array[tail_index] = head;
-            self.heap_lenlen -= 1;
+            self.heap_len = tail_index;
             self.max_heapify(0);
-            self.sort();
+            self.sort_recursion();
         }
     }
 
-    /// Inplace sorts the heap
-    pub fn sort(&mut self) {
-        self.build_max_heap();
+    /// Inplace sorts the heap and returns slice to sorted array
+    pub fn sort(&mut self) -> &[i32]{
+        // By starting at the last parent node in the heap
+        // it skips `n/2` items in the array, (ie all leaves).
+        // This is ok beucase subtrees composed by the leaves 
+        // are max-heapified by definition.
+        //
+        // Apparently this step complexity O(lg n) as opposed to O(n)
+        // but I don't fully understand why
+        let last_leaf = self.array.len() - 1;
+        let last_node = parent(last_leaf);
+        for i in (1..=last_node).rev() {
+            self.max_heapify(i);
+        }
         self.sort_recursion();
+        &self.array
     }
 
     fn getter(&self, index: usize) -> Option<i32> {
@@ -138,11 +136,11 @@ mod test {
     #[test]
     fn test_sort_heap() {
         let mut array = [9, 5, 2, 3, 1, 7];
-        let mut heap = Heap::new(&mut array);
+        let mut heap = MaxHeap::new(&mut array);
 
-        heap.sort();
+        let slice = heap.sort();
 
-        assert_eq!(heap.slice(), &[1,2,3,5,7,9]);
+        assert_eq!(slice, &[1,2,3,5,7,9]);
     }
 
 }
