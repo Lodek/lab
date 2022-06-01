@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+    volumes:
+      - .:/app
+    ports:
+      - 26657
+      - 1317
+      - 4500
+  web:
+    build:
+      dockerfile: vue/Dockerfile
+    ports:
+      - 8080
