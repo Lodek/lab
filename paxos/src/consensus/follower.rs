@@ -23,12 +23,24 @@ impl<T> PaxosFollower<T> {
         }
     }
 
-    /// Check whether the given ballot id is eligible to receive
-    /// the instances vote, that is, it does not violate a previous promise
-    pub fn can_vote(&self, ballot_id: BallotId) -> bool {
+    /// Check whether the given ballot id is eligible to be the new promise.
+    pub fn can_promise(&self, ballot_id: BallotId) -> bool {
         self.state.promise
             .map(|id| ballot_id >= id)
             .unwrap_or(true) // lacking a promise, it can promise anythign
+    }
+
+    /// Check whether the given ballot id is eligible to receive
+    /// the instances vote, that is, it does not violate a previous promise.
+    /// This function panics if the instance has made not previous promises,
+    /// as voting without a promise violates the protocol
+    pub fn can_vote(&self, ballot_id: BallotId) -> bool {
+        if self.state.promise.is_none() {
+            panic!("follower has made no promise hence cannot vote: instance_id = {} member_id = {}", self.state.instance_id, self.state.member);
+        }
+
+        let promise_id = self.state.promise.as_ref().unwrap();
+        &ballot_id >= promise_id
     }
 
     /// Return whether Paxos instance has reached consensus
@@ -43,7 +55,7 @@ impl<T: Clone> PaxosFollower<T> {
     /// Setting a promises creates a new follower whose state is the same
     /// as the original one, except for the promise.
     pub fn make_promise(&self, ballot_id: BallotId) -> Option<PaxosFollower<T>> {
-        if !self.can_vote(ballot_id) {
+        if !self.can_promise(ballot_id) {
             return None;
         }
 
@@ -94,20 +106,21 @@ mod tests {
     }
 
     #[test]
-    fn test_new_follower_can_vote() {
+    fn test_new_follower_can_promise() {
         let follower = PaxosFollower::<u64>::new(1, 1);
         let id = make_id(10);
 
-        let can_vote = follower.can_vote(id);
+        let can_promise = follower.can_promise(id);
 
-        assert!(can_vote);
+        assert!(can_promise);
     }
 
     #[test]
     fn test_cast_vote_return_expected_vote() {
-        let mut follower = PaxosFollower::new(1, 1);
-
+        let follower = PaxosFollower::new(1, 1);
         let id = make_id(10);
+        let mut follower = follower.make_promise(id).unwrap();
+
         let prop = Proposal {
             ballot: id,
             decree: 1,

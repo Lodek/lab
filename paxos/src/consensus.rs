@@ -62,7 +62,7 @@ struct PaxosState<T> {
 
     /// Unique identifier for this instance of the synod protocol.
     /// (effectively this represents the id of the decree in the complete ledger of decrees)
-    pub instace_id: InstanceId,
+    pub instance_id: InstanceId,
 
     /// Promise made to a proposer of the minimum BallotId in which this instance will vote.
     pub promise: Option<BallotId>,
@@ -78,14 +78,14 @@ struct PaxosState<T> {
 }
 
 impl<T> PaxosState<T> {
-    pub fn new(member: MemberId, instace_id: InstanceId) -> Self {
+    pub fn new(member: MemberId, instance_id: InstanceId) -> Self {
         return Self{
             promise: None,
             last_vote: None,
             last_voted_decree: None,
             decree: None,
             member,
-            instace_id,
+            instance_id,
         }
     }
 }
